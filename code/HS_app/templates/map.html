@@ -1,0 +1,634 @@
+<!-- general map overlay: https://github.com/jeffkaufman/apartment_prices -->
+<!-- time slider from: https://gist.github.com/kosso/1118840 -->
+
+<!-- Write your comments here -->
+<!--
+
+variables need to initialize with
+dates
+map_names
+map_var
+map_price
+min_lon
+max_lon
+min_lat
+max_lot
+buck
+loc
+
+ -->
+
+
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>HotSpots {{loc}}</title>
+
+        <!-- Bootstrap Core CSS -->
+        <link href="../static/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- Custom CSS -->
+        <link href="../static/css/business-casual.css" rel="stylesheet">
+
+
+        <meta name=viewport content="initial-scale=1.0, user-scalable=no"/>
+        <script type='text/javascript'>window.mod_pagespeed_start = Number(new Date());</script>
+        <style type="text/css">
+            html{
+                height:100%
+            }
+            body{
+                height:100%;
+                margin:0;
+                padding:0
+            }
+            td{
+                line-height:100%
+            }
+            #map_canvas{
+                height:100%
+            }
+            #legend{
+                position:absolute;
+                top:5em;
+                right:10px;
+                margin:auto;
+                background:#fff;
+                border-style:solid;
+                border-width:1px;
+                padding:2px;
+                font-size: 1em;
+            }
+            #home-button{
+                position:absolute;
+                top:5em;
+                left:10px;
+                margin:auto;
+                font-size: 1em;
+                background:#fff;
+                border-style:solid;
+                border-width:1px;
+                padding:0.5em;
+            }
+            #markers-button{
+                position:absolute;
+                top:20em;
+                left:10px;
+                margin:auto;
+                background:#fff;
+                border-style:solid;
+                border-width:1px;
+                padding:0.5em;
+            }
+            #choose-var{
+                position:absolute;
+                bottom:0.5em;
+                left:10px;
+                margin:auto;
+                background:#fff;
+                border-style:solid;
+                border-width:1px;
+                padding:0.5em;
+            }
+            #choose-price{
+                position:absolute;
+                bottom:11em;
+                left:10px;
+                margin:auto;
+                background:#fff;
+                border-style:solid;
+                border-width:1px;
+                padding:0.5em;
+            }
+            #map-loading{
+                position:absolute;
+                z-index:-1
+            }
+            #date-slider{
+                width: 100%;
+                position: absolute;
+                top: 0;
+                left: 0;
+                padding: 0.5em;
+                margin:auto;
+                background:#fff;
+            }
+            #dateshown {
+                font-size: 1.2em;
+            }
+            #wrapper {
+                width: 100%;
+                position: absolute;
+                min-width: 100%;
+                margin-top: 0px;
+                margin-bottom: 0px;
+                margin-right: 0px;
+                marign-left: auto;
+                background: rgba(255,255,255,1);
+                font-size: 1em;
+                height: 3em;
+                top:0;
+                right:0px;
+            }
+        }
+        </style>
+
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+        <script src="https://maps.googleapis.com/maps/api/js?key=APIKEY"></script>
+        <script type="text/javascript">
+
+/* SETTING VARS */
+            //take in initial variables:
+            map_var = '{{variable}}'
+            //console.log(map_var)
+
+            //
+            map_var_dict = {
+                'spread': 'gross profit',
+                'hold_time': 'hold time',
+                'project_days': 'construction ',
+                'initial_days_to_contract': '1st sale DOM',
+                'final_days_to_contract': '2nd sale DOM'
+            };
+
+            map_price = '{{price}}'
+            //console.log(map_price)
+
+            loc = '{{loc}}'
+            //console.log(loc)
+
+            var dates_available = []
+            {% for d in dates %}
+                dates_available.push('{{d}}');
+            {% endfor %}
+            //console.log(dates_available);
+
+            var map_names_available = []
+            {% for n in map_names %}
+                map_names_available.push('{{n}}');
+            {% endfor %}
+            //console.log(map_names_available);
+
+            var temp_buckets = []
+            {% for b in buck %}
+                temp_buckets.push({{b}});
+            {% endfor %}
+            var buckets = temp_buckets.reverse()
+            //console.log(buckets);
+
+            var zoomit;
+            {% if loc=='DC' %}
+                zoomit = 11
+            {% elif loc=='DEN' %}
+                zoomit = 11
+            {% else %}
+                zoomit = 11
+            {% endif %}
+            //console.log(zoomit);
+
+            var mean_lon;
+            var mean_lat;
+            {% if loc=='DC' %}
+                mean_lon = -77.009003
+                mean_lat = 38.889931
+            {% elif loc=='DEN' %}
+                mean_lon = 	-104.991531
+                mean_lat = 39.742043
+            {% endif %}
+
+            var overlay=null;
+            var map;
+            var current_date_index;
+            var swBound=new google.maps.LatLng({{min_lat}},{{min_lon}});
+            var neBound=new google.maps.LatLng({{max_lat}},{{max_lon}});
+            var currentOverlayImg;
+            var date_selected=false;
+            var display_markers=false;
+            TQOverlay.prototype=new google.maps.OverlayView();
+
+/* INITIALIZING */
+            function initialize(){
+                //console.log("< initialize");
+                //slider
+                document.getElementById('slide').max = dates_available.length-1;
+                document.getElementById('slide').value = document.getElementById('slide').max;
+                //maps
+                var latlng=new google.maps.LatLng(mean_lat, mean_lon);
+                var myOptions={
+                    zoom:zoomit,
+                    center:latlng,
+                    mapTypeId:google.maps.MapTypeId.ROADMAP
+                    }
+                map=new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+                google.maps.event.addListener(map, 'click', function(e){
+                    var loc=e.latLng;
+                    var latfrac=(neBound.lat()-loc.lat())/(neBound.lat()-swBound.lat());
+                    var lngfrac=(neBound.lng()-loc.lng())/(neBound.lng()-swBound.lng());
+                    if(latfrac<0 || lngfrac<0 || latfrac>=1 || lngfrac>=1){
+                        return;
+                    }
+                    var rendersize=500;
+                    var x=(1-lngfrac)*rendersize;
+                    var y=latfrac*rendersize;
+                    var canvas=document.createElement('canvas');
+                    canvas.width=rendersize;
+                    canvas.height=rendersize;
+                    ctx=canvas.getContext('2d');
+                    ctx.drawImage(currentOverlayImg,0,0,rendersize,rendersize);
+                    var pixelData=ctx.getImageData(x,y,1,1).data;
+                    var r=pixelData[0];
+                    var g=pixelData[1];
+                    var b=pixelData[2];
+                    function toHex(c){
+                        var hex=c.toString(16).toUpperCase();
+                        return hex.length==1?"0"+hex:hex;
+                    }
+                    var hexycolor="#"+toHex(r)+toHex(g)+toHex(b);
+                    });
+                if(window.location.hash.length>5){
+                    var fragment=window.location.hash.split('#')[1]
+                    var date=fragment
+                }
+                for(var i=0; i<dates_available.length && !date_selected; i++){
+                    if(dates_available[i]==date){
+                        selectDate(i);
+                        date_selected=true;
+                    }
+                }
+                if(!date_selected){
+                    selectDate(dates_available.length-1);
+                }
+                //console.log("</ initialize");
+            }
+
+/* UPDATING */
+            function updateMapImage(){
+                //console.log("< updateMapImage");
+                //date
+                var image_date=dates_available[current_date_index];
+                var image_date_str=showDate(image_date)
+                var span=document.getElementById("dateshown");
+                while(span.firstChild){
+                    span.removeChild(span.firstChild);
+                }
+                span.appendChild(document.createTextNode(image_date_str));
+                //map
+                var image_name=map_names_available[current_date_index];
+                var bounds=new google.maps.LatLngBounds(swBound,neBound);
+                var srcImage="get_map?name="+image_name+"&loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
+                if(overlay!=null){
+                    overlay.setMap(null);
+                }
+                overlay=new TQOverlay(bounds,srcImage,map);
+                if(display_markers==true){
+                    resetMarkers();
+                    getMarkers();
+                }
+                //console.log("</ updateMapImage");
+            }
+            function updateBuckets(){
+                //console.log("< updateBuckets");
+                req = "/update_buckets?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
+                $.get(req, function(data) {
+                    console.log($.parseJSON(data));
+                    buckets=$.parseJSON(data);
+                }).done(function() {
+                                        updateMapImage();
+                                        setLegend();
+                                    });
+                //console.log("</ updateBuckets");
+            }
+            function updateSlider(slideAmount) {
+                //console.log("< call updateSlider");
+                //set current_date_index
+                document.getElementById('slide').value = Number(slideAmount);
+                selectDate(Number(slideAmount));
+                //console.log("</ call updateSlider");
+            }
+            function earlier(){
+                //console.log("< earlier");
+                if(current_date_index>0){
+                    //selectDate(current_date_index-1);
+                    updateSlider(current_date_index-1);
+                }
+                //console.log("</ earlier");
+            }
+            function later(){
+                //console.log("< later");
+                if(current_date_index<dates_available.length-1){
+                    //selectDate(current_date_index+1);
+                    updateSlider(current_date_index+1);
+                }
+                //console.log("</ later");
+            }
+            function updateHash(){
+                //console.log("< updateHash");
+                window.location.hash=dates_available[current_date_index];
+                //console.log("</ updateHash");
+            }
+
+/* SETTING */
+            function setLegend(){
+                //console.log("< setLegend");
+                var key_spans=document.getElementsByClassName("key");
+                for(var i=0; i<key_spans.length && i<buckets.length-1;  i++){
+                    if(map_var == 'spread'){
+                        key_spans[i].innerHTML=roundOneK(buckets[i]);
+                    } else {
+                        key_spans[i].innerHTML=roundFive(buckets[i]);
+                    }
+                }
+                if(map_var == 'spread'){
+                    document.getElementById("keyfinal").innerHTML=roundOneK(buckets[buckets.length-1]);
+                } else{
+                    document.getElementById("keyfinal").innerHTML=roundFive(buckets[buckets.length-1]);
+                }
+                updateHash();
+                //console.log("</ setLegend");
+            }
+            function selectDate(date_index){
+                //console.log("< selectDate");
+                current_date_index=date_index;
+                updateMapImage();
+                setNavigationEnabledness();
+                updateHash();
+                //console.log("</ selectDate");
+            }
+            function selectVar(new_var){
+                //console.log("< selectVar");
+                map_var=document.querySelector('input[name=mpvar]:checked').value;
+                updateBuckets();
+                //console.log("</ selectVar");
+            }
+            function selectPrice(new_price){
+                //console.log("< selectPrice");
+                map_price=document.querySelector('input[name=mppri]:checked').value;
+                updateBuckets();
+                //console.log("</ selectPrice");
+            }
+
+
+/* Markers */
+            var infowindow = new google.maps.InfoWindow();
+            var markers_list = [];
+            function createMarker(latlon, title, text) {
+                //console.log("< createMarker");
+                var marker = new google.maps.Marker({
+                    position: latlon,
+                    title: title,
+                    map: map
+                });
+                google.maps.event.addListener(marker, 'click', function () {
+                    infowindow.setContent(text);
+                    infowindow.open(map, marker);
+                });
+                markers_list.push(marker);
+                //console.log("</ createMarker");
+            }
+            function getMarkers() {
+                //console.log("< getMarkers");
+                display_markers=true;
+                image_date=dates_available[current_date_index]
+                req = "/get_markers?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price+"&date="+image_date;
+                $.get(req, function(data) {
+                    markers_dict=$.parseJSON(data);
+                }).done(function() {
+                                        for(var key in markers_dict){
+                                            var latlng = new google.maps.LatLng(markers_dict[key]['lat'], markers_dict[key]['lon']);
+                                            var title = key;
+                                            // var txt = '1st price: '+string(markers_dict[key]['priceA'])+' map variable: '+string(markers_dict[key]['var']);
+                                            var txt = map_var_dict[map_var]+': '+markers_dict[key]['var'];
+                                            createMarker(latlng, title, txt);
+                                        }
+                                    });
+
+                //console.log("</ getMarkers");
+            }
+            function clearMarkers() {
+                display_markers=false;
+                for (var i = 0; i < markers_list.length; i++) {
+                    markers_list[i].setMap(null);
+                };
+                markers_list = [];
+            }
+            function resetMarkers() {
+                for (var i = 0; i < markers_list.length; i++) {
+                    markers_list[i].setMap(null);
+                };
+                markers_list = [];
+            }
+
+
+/* DISPLAY HELPERS */
+            function showDate(d){
+                //console.log("< showDate");
+                var year_str = d.split('_')[0];
+                var month_num_str = d.split('_')[1];
+                if (month_num_str == '01' ) {
+                    var month_str = 'January';
+                } else if (month_num_str == '02' ) {
+                    var month_str = 'February';
+                } else if (month_num_str == '03' ) {
+                    var month_str = 'March';
+                } else if (month_num_str == '04' ) {
+                    var month_str = 'April';
+                } else if (month_num_str == '05' ) {
+                    var month_str = 'May';
+                } else if (month_num_str == '06' ) {
+                    var month_str = 'June';
+                } else if (month_num_str == '07' ) {
+                    var month_str = 'July';
+                } else if (month_num_str == '08' ) {
+                    var month_str = 'August';
+                } else if (month_num_str == '09' ) {
+                    var month_str = 'September';
+                } else if (month_num_str == '10' ) {
+                    var month_str = 'October';
+                } else if (month_num_str == '11' ) {
+                    var month_str = 'November';
+                } else if (month_num_str == '12' ) {
+                    var month_str = 'December';
+                } else {
+                    var month_str = '?';
+                }
+;
+                return year_str+" "+month_str;
+            }
+            function roundFive(n){
+                //console.log("< roundFive");
+                return Math.round(Number(n)/5.)*5;
+            }
+            function roundOneK(n){
+                //console.log("< roundOneK");
+                return Math.round(Number(n)/1000.)*1000;
+            }
+
+/* HELPERS */
+            function setNavigationEnabledness(){
+                document.getElementById("earlier").disabled=current_date_index<=0;
+                document.getElementById("later").disabled=current_date_index>=dates_available.length-1;
+            }
+            function fetch(url,callback){
+                var xhr=new XMLHttpRequest();
+                xhr.onreadystatechange=function(){
+                    if(xhr.readyState==4&&xhr.status==200){
+                        callback(xhr.responseText);
+                    }
+                };
+                xhr.open("GET",url,true);
+                xhr.send();
+            }
+            function TQOverlay(bounds,image,map){
+                this.bounds_=bounds;
+                this.image_=image;
+                this.map_=map;
+                this.div_=null;
+                this.setMap(map);
+            }
+            TQOverlay.prototype.onAdd=function(){
+                var div=document.createElement('DIV');
+                div.style.border="none";
+                div.style.borderWidth="0px";
+                div.style.position="absolute";
+                currentOverlayImg=document.createElement("img");
+                currentOverlayImg.src=this.image_;
+                currentOverlayImg.style.width="100%";
+                currentOverlayImg.style.height="100%";
+                currentOverlayImg.style.opacity=.5;
+                currentOverlayImg.style.filter='alpha(opacity=50)';
+                div.appendChild(currentOverlayImg);
+                this.div_=div;
+                var panes=this.getPanes();
+                panes.overlayLayer.appendChild(div);
+            }
+            TQOverlay.prototype.draw=function(){
+                var overlayProjection=this.getProjection();
+                var sw=overlayProjection.fromLatLngToDivPixel(this.bounds_.getSouthWest());
+                var ne=overlayProjection.fromLatLngToDivPixel(this.bounds_.getNorthEast());
+                var div=this.div_;
+                div.style.left=sw.x+'px';
+                div.style.top=ne.y+'px';
+                div.style.width=(ne.x-sw.x)+'px';
+                div.style.height=(sw.y-ne.y)+'px';
+            }
+            TQOverlay.prototype.onRemove=function(){
+                this.div_.parentNode.removeChild(this.div_);
+                this.div_=null;
+            }
+        </script>
+    </head>
+
+<!-- BODY -->
+    <body onload=initialize()>
+
+<!-- MAP -->
+    <div id=map-loading>Loading...</div>
+    <div id=map_canvas style="width:100%; height:100%"></div>
+
+<!-- SLIDER -->
+    <div id=date-slider>
+        <center>
+        <button id=earlier onclick="earlier()">&lt;<button>
+        <input id=slide type=range min=0 max="" step=1 value="" onchange="updateSlider(this.value)" style="width:100%"/>
+        <button id=later onclick="later()">&gt;</button>
+        </center>
+        <center><span id=dateshown></span></center>
+    </div>
+
+<!-- HOME BUTTON -->
+    <div id=home-button>
+        <tr><td>
+            <center><a href="/">home</a></center>
+        </div>
+    </div>
+
+<!-- MARKERS BUTTON -->
+    <div id=markers-button>
+        <div>individual sales</div>
+        <form>
+            <input type="radio" name="mark" value=false onclick="getMarkers()"> markers<br>
+            <input type="radio" name="mark" value=false onclick="clearMarkers()" checked> no markers<br>
+        </form>
+    </div>
+
+<!-- CHOOSE VAR -->
+    <div id=choose-var>
+        <div>map variable</div>
+        <form>
+            <input type="radio" name="mpvar" value="spread" onclick="selectVar()" checked> gross profit<br>
+            <input type="radio" name="mpvar" value="hold_time" onclick="selectVar()"> hold time<br>
+            <input type="radio" name="mpvar" value="project_days" onclick="selectVar()"> construction days<br>
+            <input type="radio" name="mpvar" value="initial_days_to_contract" onclick="selectVar()"> 1st sale DOM<br>
+            <input type="radio" name="mpvar" value="final_days_to_contract" onclick="selectVar()"> 2nd sale DOM<br>
+        </form>
+    </div>
+
+<!-- CHOOSE PRICE -->
+    <div id=choose-price>
+        <div>1st sale price</div>
+        <form>
+            <input type="radio" name="mppri" value="all" onclick="selectPrice()" checked> all<br>
+            <input type="radio" name="mppri" value="0_200000" onclick="selectPrice()"> 0-200k<br>
+            <input type="radio" name="mppri" value="200000_400000" onclick="selectPrice()"> 200k-400k<br>
+            <input type="radio" name="mppri" value="400000_600000" onclick="selectPrice()"> 400k-600k<br>
+            <input type="radio" name="mppri" value="600000_800000" onclick="selectPrice()"> 600k-800k<br>
+            <input type="radio" name="mppri" value="800000_1000000" onclick="selectPrice()"> 800k-1m<br>
+            <input type="radio" name="mppri" value="1000000_plus" onclick="selectPrice()"> 1m +<br>
+        </form>
+    </div>
+
+<!-- LEGEND -->
+    <div id=legend>
+        <table>
+            <tr><td valign=top>
+                <div class=var_values>
+                <font color="#FF0000">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#FF5B00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#FF7F00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#FFAB00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#FFD000">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#FFF000">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#FFFF00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#DAFF00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#B0FF00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#80FF00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#00FF00">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#00FFFF">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#00F0FF">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#00D5FF">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#00ABFF">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#007FFF">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#0056FF">&#9608;</font> <span class=key>loading...</span><br>
+                <font color="#0000FF">&#9608;</font> <span id=keyfinal>loading...</span><br>
+            </div>
+            <script type="text/javascript">
+                setLegend();
+            </script>
+            <tr><td valign=bottom>
+        </table>
+
+    </body>
+</html>
+
+<!-- colors from png writer (gausify.cpp) -->
+<!-- double colors[18][3] =
+    rgba(0, 0, 225, 0.5) //blue
+    rgba(0, 86, 225, 0.5)
+    rgba(0, 127, 225, 0.5)
+    rgba(0, 171, 225, 0.5)
+    rgba(0, 213, 225, 0.5)
+    rgba(0, 240, 225, 0.5)
+    rgba(0, 225, 225, 0.5)
+    rgba(0, 225, 0, 0.5)
+    rgba(128, 225, 0, 0.5)
+    rgba(176, 225, 0, 0.5)
+    rgba(218, 225, 0, 0.5)
+    rgba(225, 225, 0, 0.5)
+    rgba(225, 240, 0, 0.5)
+    rgba(225, 208, 0, 0.5)
+    rgba(225, 171, 0, 0.5)
+    rgba(225, 127, 0, 0.5)
+    rgba(225, 91, 0, 0.5)
+    rgba(225, 0, 0, 0.5) //red -->

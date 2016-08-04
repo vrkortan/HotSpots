@@ -33,6 +33,8 @@ class MLS:
     def drop_goofy_pairs(self, df):
         #keep only differences in listed_on_B and listed_on_A is > 2 weeks
         df = df[(df['listed_on_B'] - df['listed_on_A']).astype('timedelta64[D]') >= self.drop_spread_less]
+        #keep only differences in listed_on_B and sold_on_A is > 0
+        df = df[(df['listed_on_B'] - df['sold_on_A']).astype('timedelta64[D]') >= 0]
         #keep only differences in contracted_on_A and listed_on_A is > 0
         df = df[(df['contracted_on_A'] - df['listed_on_A']).astype('timedelta64[D]') >= 0]
         #keep only differences in contracted_on_B and listed_on_B is > 0
@@ -163,6 +165,11 @@ class MLS:
         #make sure empty string defaults to 'all'
         if self.target_name == '':
             self.target_name = 'spread'
+        #set weather or not a high number should be incoded as red
+        if self.target_name in ['spread', 'hold_time', 'project_days']:
+            self.highred = 1
+        else:
+            self.highred = 0
 
         #calc sigma (units of lat/lon)
         #city block is ~ 1/16 of a mile, 1 degree longitude = 69.172 miles, 1 degree latitude = cos (lat) * 69.172
@@ -194,7 +201,6 @@ class MLS:
         # self.calc_specific_dir
         # #buckets (for color key)
         # self.bucket_devisions
-        # self.devisions ?
 
 
     def load_mls(self):
@@ -284,8 +290,12 @@ class MLS:
         #metadata base_dir
         metadata_base_dir = self.base_dir + '/' + self.date_data_dir + '/' + self.location + '/' + self.target_name + '-' + self.target_price
         #min max target valuese:
-        self.min_target = df[self.target_name].min()
-        self.max_target = df[self.target_name].max()
+        if self.target_name == 'spread':
+            self.min_target = 0.0
+            self.max_target = 900000.0
+        else:
+            self.min_target = df[self.target_name].min()
+            self.max_target = df[self.target_name].max()
         #buckets:
         self.calc_buckets()
         #metadata
@@ -344,7 +354,7 @@ class MLS:
         #make strings to call gausify
         run_its = []
         for date_filename in date_filenames:
-            run_its.append('./gausify -l=%f,%f,%f,%f -g=%i,%i -t=%f,%f -s=%f -b=%i -c=%i %s' % (self.min_lon, self.max_lon, self.min_lat, self.max_lat, self.grid_x, self.grid_y, self.min_target, self.max_target, self.sigma, self.sigma_blocks, self.distance_cutoff, date_filename))
+            run_its.append('./gausify -l=%f,%f,%f,%f -g=%i,%i -t=%f,%f -s=%f -b=%i -c=%i -i=%i %s' % (self.min_lon, self.max_lon, self.min_lat, self.max_lat, self.grid_x, self.grid_y, self.min_target, self.max_target, self.sigma, self.sigma_blocks, self.distance_cutoff, self.highred, date_filename))
 
         print ('writing %i convolution png files ...' % (len(run_its)))
 
@@ -354,16 +364,20 @@ class MLS:
             cores = 1
         pool = multiprocessing.Pool(cores)
         pool.map(run_cpp_conv_png, run_its)
+        pool.close()
+        pool.join()
 
 
     def calc_buckets(self):
         self.bucket_devisions = []
         self.bucket_devisions.append(self.min_target)
-        delta = abs(self.max_target-self.min_target) / 16.0
+        delta = abs(self.max_target-self.min_target) / 18.0
         starting = self.min_target + (delta / 2.0)
         for i in xrange(0,16):
             self.bucket_devisions.append(starting + delta * float(i))
         self.bucket_devisions.append(self.max_target)
+        if self.highred == 0:
+            self.bucket_devisions.reverse()
 
 
     def write_metadata(self, date_base_dir):
@@ -398,28 +412,32 @@ if __name__ == '__main__':
 
     map_prices = ['0_200000', '200000_400000', '400000_600000', '600000_800000', '800000_1000000', '1000000_plus', 'all']
     map_values = ['spread', 'hold_time', 'project_days', 'initial_days_to_contract', 'final_days_to_contract']
+    months = [4,6,8]
+    sigmabs = [1,2,3,5]
+    base = '/home/ubuntu/moredata/toAWS/data'
+    csv_dc = '/home/ubuntu/moredata/toAWS/data/dc_flip_data.csv'
+    csv_den = '/home/ubuntu/moredata/toAWS/data/den_flip_data.csv'
 
-    for val in map_values:
-        for price in map_prices:
+    for month in months:
+        for sigmab in sigmabs:
+            date_dir = 'month_ave_%i' % (month)
+            for val in map_values:
+                for price in map_prices:
 
-            #DC
-            mls = MLS(csv_flip_filename='/Users/victoriakortan/Desktop/HotSpots/privy_data/den_flip_data.csv',
-                        base_dir='/Users/victoriakortan/Desktop/HotSpots/data',
-                        location='DEN', target_name=val, target_price=price,
-                        grid_x=1800, grid_y=1800, grid_square=False, distance_cutoff=10,
-                        sigma_blocks=2, date_data_dir='date_data', parallelize=True)
+                    #DEN
+                    mls = MLS(csv_flip_filename=csv_den, base_dir=base,
+                              location='DEN', target_name=val, target_price=price,
+                              grid_x=1800, grid_y=1800, grid_square=True, distance_cutoff=10,
+                              sigma_blocks=sigmab, date_data_dir=date_dir, parallelize=True)
+                    df = mls.load_mls()
+                    mls.write_date_data_to_csv(df)
+                    mls.write_conv_data_to_png()
 
-            df = mls.load_mls()
-            mls.write_date_data_to_csv(df)
-            mls.write_conv_data_to_png()
-
-            #DEN
-            mls = MLS(csv_flip_filename='/Users/victoriakortan/Desktop/HotSpots/privy_data/dc_flip_data.csv',
-                      base_dir='/Users/victoriakortan/Desktop/HotSpots/data',
-                      location='DC', target_name=val, target_price=price,
-                      grid_x=1600, grid_y=1600, grid_square=False, distance_cutoff=10,
-                      sigma_blocks=2, date_data_dir='date_data', parallelize=True)
-
-            df = mls.load_mls()
-            mls.write_date_data_to_csv(df)
-            mls.write_conv_data_to_png()
+                    #DC
+                    mls = MLS(csv_flip_filename=csv_dc, base_dir=base,
+                                location='DC', target_name=val, target_price=price,
+                                grid_x=2000, grid_y=2000, grid_square=True, distance_cutoff=10,
+                                sigma_blocks=sigmab, date_data_dir=date_dir, parallelize=True)
+                    df = mls.load_mls()
+                    mls.write_date_data_to_csv(df)
+                    mls.write_conv_data_to_png()

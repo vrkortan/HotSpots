@@ -1,6 +1,10 @@
 //had to install freetype with brew...  ???
 //Compile:
-//g++ -Wall -O3 -Wno-deprecated `freetype-config --cflags` `freetype-config --libs` -I/usr/local/include/ -I/opt/local/include -I/opt/local/include/freetype2 -o ./gausify gausify.cpp -L/usr/local/lib/ -L/opt/local/lib/ -lz -lpngwriter -lpng
+//INHOUSE
+//g++ -Wall -O3 -Wno-deprecated `freetype-config --cflags` `freetype-config --libs` -DNO_FREETYPE -I/usr/local/include/ -I/opt/local/include -I/opt/local/include/freetype2 -o ./gausify gausify.cpp -L/usr/local/lib/ -L/opt/local/lib/ -lz -lpngwriter -lpng
+
+//AWS
+// g++ -std=c++11 -Wall -O3 -Wno-deprecated `freetype-config --cflags` `freetype-config --libs` -DNO_FREETYPE -I/usr/include/ -I/home/ubuntu/build/include -o ./gausify gausify.cpp -L/usr/include -L/home/ubuntu/build/lib -lz -lpngwriter -lpng
 
 #include <cstring>
 #include <iostream>
@@ -14,19 +18,19 @@
 #include <stdio.h>
 #include <ctime>
 #include <pngwriter.h> //https://github.com/pngwriter/pngwriter
-using namespace std;
+//#include <cstdlib> strtol(s.c_str(),0,10);
 
 //from http://stackoverflow.com/a/236803
-vector<string> &split(const string &s, char delim, vector<string> &elems) {
-    stringstream ss(s);
-    string item;
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
     while (getline(ss, item, delim)) {
         elems.push_back(item);
     }
     return elems;
 }
-vector<string> split(const string &s, char delim) {
-    vector<string> elems;
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
     split(s, delim, elems);
     return elems;
 }
@@ -37,8 +41,8 @@ void grid_to_ll(double ll[2], int x, int y, double min_lon, double max_lon, doub
 {
     //x is lon, y is lat
     //0,0 is MIN_LON, MIN_LAT
-    double delta_lon = abs(max_lon-min_lon);
-    double delta_lat = abs(max_lat-min_lat);
+    double delta_lon = std::abs(max_lon-min_lon);
+    double delta_lat = std::abs(max_lat-min_lat);
     double x_frac = (float)x / grid_x;
     double y_frac = (float)y / grid_y;
     double lon = min_lon + x_frac * delta_lon;
@@ -54,8 +58,8 @@ void ll_to_pixel(double xy[2], int lon, int lat, double min_lon, double max_lon,
     //0,0 is MIN_LON, MIN_LAT
     double adj_lon = lon - min_lon;
     double adj_lat = lat - min_lat;
-    double delta_lon = abs(max_lon - min_lon);
-    double delta_lat = abs(max_lat - min_lat);
+    double delta_lon = std::abs(max_lon - min_lon);
+    double delta_lat = std::abs(max_lat - min_lat);
     double lon_frac = adj_lon / delta_lon;
     double lat_frac = adj_lat / delta_lat;
 
@@ -67,7 +71,7 @@ void ll_to_pixel(double xy[2], int lon, int lat, double min_lon, double max_lon,
 
 int main (int argc, char* argv[])
 {
-    double colors[18][3] =
+    double colors_highred[18][3] =
         {{0./225., 0./225., 225./225.}, //blue
         {0./225., 86./225., 225./225.},
         {0./225., 127./225., 225./225.},
@@ -87,11 +91,31 @@ int main (int argc, char* argv[])
         {225./225., 91./225., 0./225.},
         {225./225., 0./225., 0./225.}}; //red
 
+    double colors_highblue[18][3] =
+        {{225./225., 0./225., 0./225.}, //red
+        {225./225., 91./225., 0./225.},
+        {225./225., 127./225., 0./225.},
+        {225./225., 171./225., 0./225.},
+        {225./225., 208./225., 0./225.},
+        {225./225., 240./225., 0./225.},
+        {225./225., 225./225., 0./225.},
+        {218./225., 225./225., 0./225.},
+        {176./225., 225./225., 0./225.},
+        {128./225., 225./225., 0./225.},
+        {0./225., 225./225., 0./225.},
+        {0./225., 225./225., 225./225.},
+        {0./225., 240./225., 225./225.},
+        {0./225., 213./225., 225./225.},
+        {0./225., 171./225., 225./225.},
+        {0./225., 127./225., 225./225.},
+        {0./225., 86./225., 225./225.},
+        {0./225., 0./225., 225./225.}}; //blue
+
     int Narg = 1;
     int i;
 
 	//Argument/parameter initialization
-    string filename;
+    std::string filename;
     double min_lon = 0.0;
     double max_lon = 0.0;
     double min_lat = 0.0;
@@ -102,8 +126,10 @@ int main (int argc, char* argv[])
     int grid_y = 500;
     double sigma = 0.05;
     int distance_cutoff = 10; //will be in factors of sigma
+    int highred = 1; //will say if the color scale should be, high=red=1, high=blue=0
     // double devisions[18];
     int blocks = 5;
+    //read in command line arguments
 	for (i=1; i<argc; i++)
 	{
         if (strncmp(argv[i],"-l=",3)==0)
@@ -145,28 +171,33 @@ int main (int argc, char* argv[])
             sscanf(argv[i],"-c=%i",&distance_cutoff);
             Narg++;
         }
+        if (strncmp(argv[i],"-i=",3)==0)
+        {
+            sscanf(argv[i],"-i=%i",&highred);
+            Narg++;
+        }
 	}
 
 	if (argc<(1+Narg))
 	{
-		cout << "Usage: gausify -l=min_lon,max_lon,min_lat,max_lat -g=grid_x,grid_y -s=sigma -b=blocks -c=distance_cutoff filename" << endl;
-		cout << "convolutes data with a Gaussian and writes to .png file" << endl;
+		std::cout << "Usage: gausify -l=min_lon,max_lon,min_lat,max_lat -g=grid_x,grid_y -s=sigma -b=blocks -c=distance_cutoff filename -i=1" << std::endl;
+		std::cout << "convolutes data with a Gaussian and writes to .png file" << std::endl;
 		return 1;
 	}
 
     filename = argv[Narg];
 
     //check to make sure output file exists
-    stringstream ss;
-    string output_filename;
-    vector<string> filename_vector;
-    vector<string> date_vector;
+    std::stringstream ss;
+    std::string output_filename;
+    std::vector<std::string> filename_vector;
+    std::vector<std::string> date_vector;
     char d1 = '/';
     char d2 = '.';
     filename_vector = split(filename, d1);
-    string date_tmp = filename_vector.back();
+    std::string date_tmp = filename_vector.back();
     date_vector = split(date_tmp,d2);
-    string date = date_vector[0];
+    std::string date = date_vector[0];
     filename_vector.pop_back();
     for(int i = 0; i < filename_vector.size(); i++){
         ss << filename_vector[i] << "/";
@@ -175,33 +206,34 @@ int main (int argc, char* argv[])
 
     output_filename = ss.str();
     ss.str("");
-    if (ifstream(output_filename.c_str())){
-        cerr << "\nOutput file exists : " << output_filename.c_str() << '\n';
+    if (std::ifstream(output_filename.c_str())){
+        std::cerr << "\nOutput file exists : " << output_filename.c_str() << '\n';
         exit(0);
     }
 
     //read file into vector (value, lon, lat)
-    vector<vector<double> > values;
-    ifstream f_in(filename.c_str());
+    std::vector<std::vector<double> > values;
+    std::ifstream f_in(filename.c_str());
     if (!f_in) {
-        cerr << "\nCan't open input file " << filename << '\n';
+        std::cerr << "\nCan't open input file " << filename << '\n';
         exit(0);
     } else {
         while (f_in)
         {
-            string s;
+            std::string s;
             if (!getline(f_in, s)){
                 break;
             }
-            istringstream ss(s);
-            vector <double> record;
+            //std::istream ss(s);
+            std::istringstream ss(s);
+            std::vector <double> record;
             while(ss)
             {
-                string s;
+                std::string s;
                 if (!getline( ss, s, ',' )){
                     break;
                 }
-                record.push_back( stod(s) );
+                record.push_back( std::stod(s) );
             }
             //remove last value (sold_price_A), not necessary for the plot
             record.pop_back();
@@ -211,7 +243,7 @@ int main (int argc, char* argv[])
     }
 
     //prepair to write files
-    double bucket_size = abs(max_target - min_target) / 18.;
+    double bucket_size = std::abs(max_target - min_target) / 18.;
     //double norm = 1. / ( sigma * sqrt(2. * M_PI) );
     double sum = 0.0;
 
@@ -219,7 +251,7 @@ int main (int argc, char* argv[])
     f_out = fopen(output_filename.c_str(),"w");
 
     if (!f_out) {
-        cerr << "\nCan't open output file " << output_filename << '\n';
+        std::cerr << "\nCan't open output file " << output_filename << '\n';
         exit(0);
     } else {
 
@@ -246,11 +278,16 @@ int main (int argc, char* argv[])
                     double temp_lat = values[i][2];
                     double d = sqrt( pow(pt_lon - temp_lon, 2) + pow(pt_lat - temp_lat, 2) );
                     if(d <= distance_cutoff * sigma){
-                        // sum += temp_val * norm * exp( -1. * pow(d / (sigma * sqrt(2.)),2) );
                         sum += temp_val * exp( -1. * pow(d / (sigma * sqrt(2.)),2) );
-                        // double temp_factor = exp( -1. * pow(d / (sigma * sqrt(2.)),2) );
-                        // printf("\ngrid :%.2f,%.2f  data :%.2f,%.2f  sum += %.0f * %.3f",pt_lon,pt_lat,temp_lon,temp_lat,temp_val,temp_factor);
                     }
+                }
+
+                //set if use red as the high value or blue as the high value
+                double colors[18][3];
+                if(highred == 0){
+                    std::copy(std::begin(colors_highblue), std::end(colors_highblue), std::begin(colors));
+                } else {
+                    std::copy(std::begin(colors_highred), std::end(colors_highred), std::begin(colors));
                 }
 
                 //turn sum into color
@@ -285,6 +322,4 @@ int main (int argc, char* argv[])
 
         png.close();
     }
-
-    exit(0);
 }

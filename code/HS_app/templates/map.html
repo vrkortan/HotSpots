@@ -5,7 +5,7 @@
 <!--
 
 variables need to initialize with
-dates
+
 map_names
 map_var
 map_price
@@ -15,7 +15,7 @@ min_lat
 max_lot
 buck
 loc
-
+dates_available
  -->
 
 
@@ -74,13 +74,15 @@ loc
             }
             #markers-button{
                 position:absolute;
-                top:20em;
+                bottom:24em;
                 left:10px;
                 margin:auto;
                 background:#fff;
                 border-style:solid;
                 border-width:1px;
                 padding:0.5em;
+                margin-top:0.5em;
+                margin-bottom:0.5em;
             }
             #choose-var{
                 position:absolute;
@@ -91,16 +93,20 @@ loc
                 border-style:solid;
                 border-width:1px;
                 padding:0.5em;
+                margin-top:0.5em;
+                margin-bottom:0.5em;
             }
             #choose-price{
                 position:absolute;
-                bottom:11em;
+                bottom:10.85em;
                 left:10px;
                 margin:auto;
                 background:#fff;
                 border-style:solid;
                 border-width:1px;
                 padding:0.5em;
+                margin-top:0.5em;
+                margin-bottom:0.5em;
             }
             #map-loading{
                 position:absolute;
@@ -198,6 +204,7 @@ loc
                 mean_lat = 39.742043
             {% endif %}
 
+
             var overlay=null;
             var map;
             var current_date_index;
@@ -268,16 +275,15 @@ loc
                 //console.log("< updateMapImage");
                 //date
                 var image_date=dates_available[current_date_index];
-                var image_date_str=showDate(image_date)
                 var span=document.getElementById("dateshown");
                 while(span.firstChild){
                     span.removeChild(span.firstChild);
                 }
-                span.appendChild(document.createTextNode(image_date_str));
+                span.appendChild(document.createTextNode(image_date));
                 //map
-                var image_name=map_names_available[current_date_index];
+                var image_name=image_date.split(' ')[0]+'_'+image_date.split(' ')[1];
                 var bounds=new google.maps.LatLngBounds(swBound,neBound);
-                var srcImage="get_map?name="+image_name+"&loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
+                var srcImage="/get_map?name="+image_name+"&loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
                 if(overlay!=null){
                     overlay.setMap(null);
                 }
@@ -288,17 +294,26 @@ loc
                 }
                 //console.log("</ updateMapImage");
             }
-            function updateBuckets(){
-                //console.log("< updateBuckets");
-                req = "/update_buckets?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
-                $.get(req, function(data) {
-                    console.log($.parseJSON(data));
-                    buckets=$.parseJSON(data);
-                }).done(function() {
-                                        updateMapImage();
-                                        setLegend();
-                                    });
-                //console.log("</ updateBuckets");
+            function updateBucketsDates(){
+                //console.log("< updateBucketsDates");
+                //buckets
+                reqB = "/update_buckets?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
+                $.get(reqB, function(dataB) {
+                    buckets=$.parseJSON(dataB);
+                    //dates
+                    reqD = "/get_dates?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
+                    $.get(reqD, function(dataD) {
+                        dates_available = [];
+                        dataD_dict=$.parseJSON(dataD)
+                        for(var key in dataD_dict){
+                            dates_available.push(dataD_dict[key]);
+                        }
+                        //update map/legend
+                        current_date_index = dates_available.length-1;
+                        updateMapImage();
+                        setLegend();
+                    })
+                })
             }
             function updateSlider(slideAmount) {
                 //console.log("< call updateSlider");
@@ -359,13 +374,13 @@ loc
             function selectVar(new_var){
                 //console.log("< selectVar");
                 map_var=document.querySelector('input[name=mpvar]:checked').value;
-                updateBuckets();
+                updateBucketsDates();
                 //console.log("</ selectVar");
             }
             function selectPrice(new_price){
                 //console.log("< selectPrice");
                 map_price=document.querySelector('input[name=mppri]:checked').value;
-                updateBuckets();
+                updateBucketsDates();
                 //console.log("</ selectPrice");
             }
 
@@ -391,19 +406,22 @@ loc
                 //console.log("< getMarkers");
                 display_markers=true;
                 image_date=dates_available[current_date_index]
-                req = "/get_markers?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price+"&date="+image_date;
+                image_name=image_date.split(' ')[0]+'_'+image_date.split(' ')[1];
+                req = "/get_markers?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price+"&name="+image_name;
                 $.get(req, function(data) {
                     markers_dict=$.parseJSON(data);
                 }).done(function() {
                                         for(var key in markers_dict){
                                             var latlng = new google.maps.LatLng(markers_dict[key]['lat'], markers_dict[key]['lon']);
                                             var title = key;
-                                            // var txt = '1st price: '+string(markers_dict[key]['priceA'])+' map variable: '+string(markers_dict[key]['var']);
-                                            var txt = map_var_dict[map_var]+': '+markers_dict[key]['var'];
+                                            var money = '';
+                                            if(map_var == 'spread'){
+                                                money = '$';
+                                            };
+                                            var txt = '1st price: $'+showMonies(markers_dict[key]['priceA'])+'<br>'+map_var_dict[map_var]+': '+money+showMonies(markers_dict[key]['var']);
                                             createMarker(latlng, title, txt);
                                         }
                                     });
-
                 //console.log("</ getMarkers");
             }
             function clearMarkers() {
@@ -422,47 +440,20 @@ loc
 
 
 /* DISPLAY HELPERS */
-            function showDate(d){
-                //console.log("< showDate");
-                var year_str = d.split('_')[0];
-                var month_num_str = d.split('_')[1];
-                if (month_num_str == '01' ) {
-                    var month_str = 'January';
-                } else if (month_num_str == '02' ) {
-                    var month_str = 'February';
-                } else if (month_num_str == '03' ) {
-                    var month_str = 'March';
-                } else if (month_num_str == '04' ) {
-                    var month_str = 'April';
-                } else if (month_num_str == '05' ) {
-                    var month_str = 'May';
-                } else if (month_num_str == '06' ) {
-                    var month_str = 'June';
-                } else if (month_num_str == '07' ) {
-                    var month_str = 'July';
-                } else if (month_num_str == '08' ) {
-                    var month_str = 'August';
-                } else if (month_num_str == '09' ) {
-                    var month_str = 'September';
-                } else if (month_num_str == '10' ) {
-                    var month_str = 'October';
-                } else if (month_num_str == '11' ) {
-                    var month_str = 'November';
-                } else if (month_num_str == '12' ) {
-                    var month_str = 'December';
-                } else {
-                    var month_str = '?';
-                }
-;
-                return year_str+" "+month_str;
-            }
             function roundFive(n){
                 //console.log("< roundFive");
-                return Math.round(Number(n)/5.)*5;
+                num = Math.round(Number(n)/5.)*5;
+                return showMonies(num);
             }
             function roundOneK(n){
                 //console.log("< roundOneK");
-                return Math.round(Number(n)/1000.)*1000;
+                num = Math.round(Number(n)/1000.)*1000;
+                return showMonies(num);
+            }
+            function showMonies(money){
+                // from http://stackoverflow.com/a/2901298
+                var parts = money.toString().split(".");
+                return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
 
 /* HELPERS */

@@ -1,9 +1,16 @@
 //had to install freetype with brew...  ???
 //Compile:
-//INHOUSE
+//INHOUSE (on a MAC)
 //g++ -Wall -O3 -Wno-deprecated `freetype-config --cflags` `freetype-config --libs` -DNO_FREETYPE -I/usr/local/include/ -I/opt/local/include -I/opt/local/include/freetype2 -o ./gausify gausify.cpp -L/usr/local/lib/ -L/opt/local/lib/ -lz -lpngwriter -lpng
 
 //AWS
+// to run the c++ code that was compiled on my mac on the linux cluster I had to:
+    // apt-get install g++
+    // apt-get install cmake
+    // apt-get install libpng++dev
+    // I tried to install freetype2 but never sucessfully got it in the correct place so the libpng package could find it.  Thus I just uncommented the "P_FREETYPE=1" line from the pnglib make.install.unix file
+    // install libpng following directions from their website
+    // use the below g++ command to compile
 // g++ -std=c++11 -Wall -O3 -Wno-deprecated `freetype-config --cflags` `freetype-config --libs` -DNO_FREETYPE -I/usr/include/ -I/home/ubuntu/build/include -o ./gausify gausify.cpp -L/usr/include -L/home/ubuntu/build/lib -lz -lpngwriter -lpng
 
 #include <cstring>

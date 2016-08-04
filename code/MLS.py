@@ -33,16 +33,30 @@ class MLS:
     def drop_goofy_pairs(self, df):
         #keep only differences in listed_on_B and listed_on_A is > 2 weeks
         df = df[(df['listed_on_B'] - df['listed_on_A']).astype('timedelta64[D]') >= self.drop_spread_less]
+
         #keep only differences in listed_on_B and sold_on_A is > 0
         df = df[(df['listed_on_B'] - df['sold_on_A']).astype('timedelta64[D]') >= 0]
+
         #keep only differences in contracted_on_A and listed_on_A is > 0
         df = df[(df['contracted_on_A'] - df['listed_on_A']).astype('timedelta64[D]') >= 0]
+        #keep only differences in contracted_on_A and listed_on_A is < 8 months
+        df = df[(df['contracted_on_A'] - df['listed_on_A']).astype('timedelta64[D]') <= self.drop_DOM_greater]
+
         #keep only differences in contracted_on_B and listed_on_B is > 0
         df = df[(df['contracted_on_B'] - df['listed_on_B']).astype('timedelta64[D]') >= 0]
+        #keep only differences in contracted_on_B and listed_on_B is < 8 months
+        df = df[(df['contracted_on_B'] - df['listed_on_B']).astype('timedelta64[D]') <= self.drop_DOM_greater]
+
         #keep only differences in Sold_on_A and contracted_on_A is > 0
         df = df[(df['sold_on_A'] - df['contracted_on_A']).astype('timedelta64[D]') >= 0]
+        #keep only differences in Sold_on_A and contracted_on_A is < 8 months
+        df = df[(df['sold_on_A'] - df['contracted_on_A']).astype('timedelta64[D]') <= self.drop_sale_to_contract_greater]
+
         #keep only differences in Sold_on_B and contracted_on_B is > 0
         df = df[(df['sold_on_B'] - df['contracted_on_B']).astype('timedelta64[D]') >= 0]
+        #keep only differences in Sold_on_B and contracted_on_B is < 8 months
+        df = df[(df['sold_on_B'] - df['contracted_on_B']).astype('timedelta64[D]') <= self.drop_sale_to_contract_greater]
+
         return df
 
     def get_price_range(self, df):
@@ -181,6 +195,8 @@ class MLS:
         self.drop_spread_greater = 730 #if spread is larger than 2 years drop (in days)
         self.drop_spread_less = 14 #if spread is less than 2 weeks drop (in days)
         self.month_ave = 4 #every month's data includes a window of the past 4 months
+        self.drop_DOM_greater = 245 #if took longer to go under contract than 8 months don't care
+        self.drop_sale_to_contract_greater = 245 #if took longer than 8 months to go from under contract to sold don't care
 
         #other variables defined later on:
         # #date to classify by

@@ -44,30 +44,24 @@ def showDatesN(d_str):
     return dates
 
 #pre-set variables
-month_ave = 4
+month_ave = 8
 s = 2
 #have two base dir open ie /Users/victoriakortan/Desktop/HotSpots/data/date_data/DC/ and /Users/victoriakortan/Desktop/HotSpots/data/date_data/DEN
 dict_base_filename = {}
 #local
-#dict_base_filename['DC'] = '/Users/victoriakortan/Desktop/HotSpots/data/date_data/DC'
-#dict_base_filename['DEN'] = '/Users/victoriakortan/Desktop/HotSpots/data/date_data/DEN'
-
-dict_base_filename['DC'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DC' % (month_ave)
-dict_base_filename['DEN'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DEN' % (month_ave)
-
+#dict_base_filename['DC'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DC' % (month_ave)
+#dict_base_filename['DEN'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DEN' % (month_ave)
 #AWS
-#dict_base_filename['DC'] = '/moredata/data/month_ave_%s/DC' % (month_ave)
-#dict_base_filename['DEN'] = '/moredata/data/month_ave_%s/DEN' % (month_ave)
+dict_base_filename['DC'] = '/home/ubuntu/moredata/data/month_ave_%s/DC' % (month_ave)
+dict_base_filename['DEN'] = '/home/ubuntu/moredata/data/month_ave_%s/DEN' % (month_ave)
 #current values that can be mapped
 map_values = ['spread', 'hold_time', 'project_days', 'initial_days_to_contract', 'final_days_to_contract']
-map_values = ['spread']
 #current price points that can be mapped
 map_prices = ['all', '0_200000', '200000_400000', '400000_600000', '600000_800000', '800000_1000000', '1000000_plus']
-map_prices = ['all']
 #current grid choice
 dict_calc_specific_filename = {}
-dict_calc_specific_filename['DC'] = '1800X1200_sigmablocks_%i' % (s)
-dict_calc_specific_filename['DEN'] = '1800X1500_sigmablocks_%i' % (s)
+dict_calc_specific_filename['DC'] = '2000X2000_sigmablocks_%i' % (s)
+dict_calc_specific_filename['DEN'] = '1800X1800_sigmablocks_%i' % (s)
 
 
 #read in json file-names, parse to get nested dictionary for each location:
@@ -116,7 +110,7 @@ def index():
 
 # contact page
 @app.route('/contact')
-def index():
+def contact():
     return render_template("index-contact.html")
 
 # slides page
@@ -229,4 +223,4 @@ if __name__ == '__main__':
 
 
     #WHEN PUT ON AWS DEBUG=FALSE
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=False)

@@ -22,7 +22,7 @@ The code breaks down into four parts:
     - MLS.py: organizes and calculates csv files for each metric, then calls gausify.cpp to do the gaussian convolution over space (I found that c++ is faster for the numerics)
     - gausify.cpp: does the numerics and writes the png image file
 - running the app
-    - code/HS_app
+    - code/HS_app :HS_app.py is the flask app that calls the map.html template.  map.html is responsible for overlaying the .png file with the data over the google map.
 
 ## To Do:
 - comment and streamline the MLS.py and gausify.cpp files
@@ -30,3 +30,7 @@ The code breaks down into four parts:
 - re-check the systematic formation of the flip stats
 - streamline the app files
 - think about ways to render the data dynamically (however too many choices about the data may just serve to overwhelm any potential users).  This may constitute changing the layout of the entire code and using a different layout for the app, I'm not sure if this would make it too slow or not.
+
+## References:
+- general map overlay: https://github.com/jeffkaufman/apartment_prices
+- time slider from: https://gist.github.com/kosso/1118840

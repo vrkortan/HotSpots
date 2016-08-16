@@ -4,6 +4,13 @@ import json
 import os
 import re
 
+#API key
+with open('GMkey.rtf') as f:
+    key = f.readlines()
+api_key = key[0].split(':')[1]
+api_key = 'https://maps.googleapis.com/maps/api/js?key=' + api_key
+print api_key
+
 
 #helper vars/functions
 monthN_to_monthS_dict = {'01': 'January',
@@ -49,11 +56,11 @@ s = 2
 #have two base dir open ie /Users/victoriakortan/Desktop/HotSpots/data/date_data/DC/ and /Users/victoriakortan/Desktop/HotSpots/data/date_data/DEN
 dict_base_filename = {}
 #local
-#dict_base_filename['DC'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DC' % (month_ave)
-#dict_base_filename['DEN'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DEN' % (month_ave)
+dict_base_filename['DC'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DC' % (month_ave)
+dict_base_filename['DEN'] = '/Users/victoriakortan/Desktop/HotSpots/data/month_ave_%s/DEN' % (month_ave)
 #AWS
-dict_base_filename['DC'] = '/home/ubuntu/moredata/data/month_ave_%s/DC' % (month_ave)
-dict_base_filename['DEN'] = '/home/ubuntu/moredata/data/month_ave_%s/DEN' % (month_ave)
+#dict_base_filename['DC'] = '/home/ubuntu/moredata/data/month_ave_%s/DC' % (month_ave)
+#dict_base_filename['DEN'] = '/home/ubuntu/moredata/data/month_ave_%s/DEN' % (month_ave)
 #current values that can be mapped
 map_values = ['spread', 'hold_time', 'project_days', 'initial_days_to_contract', 'final_days_to_contract']
 #current price points that can be mapped
@@ -129,7 +136,7 @@ def dc_maps():
     dates = [f.split('.')[0] for f in dates]
     dates = showDatesS(dates)
     #send
-    return render_template("map.html", map_names=dict_dc[k]['map_names'], variable=map_values[0], price=map_prices[0], min_lon=dict_dc[k]['min_lon'], max_lon=dict_dc[k]['max_lon'], min_lat=dict_dc[k]['min_lat'], max_lat=dict_dc[k]['max_lat'], buck=dict_dc[k]['bucket_devisions'], loc=dict_dc[k]['location'], dates=dates)
+    return render_template("map.html", map_names=dict_dc[k]['map_names'], variable=map_values[0], price=map_prices[0], min_lon=dict_dc[k]['min_lon'], max_lon=dict_dc[k]['max_lon'], min_lat=dict_dc[k]['min_lat'], max_lat=dict_dc[k]['max_lat'], buck=dict_dc[k]['bucket_devisions'], loc=dict_dc[k]['location'], dates=dates, api_key=api_key)
 
 # DEN maps
 @app.route('/DEN')
@@ -142,7 +149,7 @@ def den_maps():
     dates = [f.split('.')[0] for f in dates]
     dates = showDatesS(dates)
     #send
-    return render_template("map.html", map_names=dict_den[k]['map_names'], variable=map_values[0], price=map_prices[0], min_lon=dict_den[k]['min_lon'], max_lon=dict_den[k]['max_lon'], min_lat=dict_den[k]['min_lat'], max_lat=dict_den[k]['max_lat'], buck=dict_den[k]['bucket_devisions'], loc=dict_den[k]['location'], dates=dates)
+    return render_template("map.html", map_names=dict_den[k]['map_names'], variable=map_values[0], price=map_prices[0], min_lon=dict_den[k]['min_lon'], max_lon=dict_den[k]['max_lon'], min_lat=dict_den[k]['min_lat'], max_lat=dict_den[k]['max_lat'], buck=dict_den[k]['bucket_devisions'], loc=dict_den[k]['location'], dates=dates, api_key=api_key)
 
 # map images
 @app.route('/get_map')
@@ -223,4 +230,4 @@ if __name__ == '__main__':
 
 
     #WHEN PUT ON AWS DEBUG=FALSE
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    app.run(host='0.0.0.0', port=8000, debug=True)

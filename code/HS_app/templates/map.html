@@ -1,9 +1,7 @@
 <!-- general map overlay: https://github.com/jeffkaufman/apartment_prices -->
 <!-- time slider from: https://gist.github.com/kosso/1118840 -->
 
-<!-- Write your comments here -->
 <!--
-
 variables need to initialize with
 
 map_names
@@ -16,6 +14,7 @@ max_lot
 buck
 loc
 dates_available
+api_key
  -->
 
 
@@ -142,7 +141,7 @@ dates_available
         </style>
 
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA7oyqwSvEBpy5ZCxBJoL_XRwioF9i4ZDY"></script>
+        <script src='{{api_key}}'></script>
         <script type="text/javascript">
 
 /* SETTING VARS */

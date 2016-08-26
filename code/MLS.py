@@ -58,13 +58,13 @@ class MLS:
         lessusefull_columns = [col for col in all_lessusefull_columns if col in df.columns]
         df = df.drop(lessusefull_columns, axis=1)
         #take care of wrong lon/lat point in DC data
-        if (location == 'DC'):
+        if (self.location == 'DC'):
             if (df.shape[0] >= 12022): # bad lat
                 df = df.drop(df[df['lat'] == df['lat'].min()].index)
             if (df.shape[0] >= 402539): # bad lat
                 df = df.drop(df[df['lat'] == df['lat'].max()].index)
         #take care of wrong lon/lat point in DEN data
-        if (location == 'DEN'):
+        if (self.location == 'DEN'):
             df = df.drop(df[df['lat'] == 0.00].index) #bad lat
             if (df.shape[0] >= 102535): #bad lng
                     df = df.drop(df[df['lng'] == df['lng'].min()].index)
@@ -136,7 +136,7 @@ class MLS:
             cnt += 1
 
             #make a temporary table of a given property id that has been identified as a flip
-            df_temp = df_flip_metrics.loc[ df['property_id'] == df_flip.iloc[id,0] ]
+            df_temp = df_flip_metrics.loc[ df['property_id'] == df_flip.iloc[flip_row,0] ]
 
             #bulild up the row that will eventually be added to the flipped dataframe
             for temp_row in xrange(0, df_temp.shape[0]-1):

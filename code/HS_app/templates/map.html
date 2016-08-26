@@ -1,4 +1,4 @@
-<!-- general map overlay: https://github.com/jeffkaufman/apartment_prices -->
+<!-- general map overlay from: https://github.com/jeffkaufman/apartment_prices -->
 <!-- time slider from: https://gist.github.com/kosso/1118840 -->
 
 <!--
@@ -174,9 +174,6 @@ api_key
                                 };
             //take in initial variables:
             map_var = '{{variable}}';
-            //console.log(map_var)
-
-            //
             map_var_dict = {
                 'spread': 'gross profit',
                 'hold_time': 'hold time',
@@ -184,17 +181,12 @@ api_key
                 'initial_days_to_contract': '1st sale DOM',
                 'final_days_to_contract': '2nd sale DOM'
             };
-
             map_price = '{{price}}';
-            //console.log(map_price)
-
             loc = '{{loc}}';
-            //console.log(loc)
 
             var dates_available = []
             {% for d in dates %}
-                //dates_available.push('{{d}}');
-                dates_available.push( parseInt( '{{d}}'.split(' ')[0] + monthS_to_monthN_dict['{{d}}'.split(' ')[1]] ) );
+                dates_available.push(parseInt( '{{d}}'.replace('_', '') ))
             {% endfor %}
             dates_available.sort();
             var new_dates = [];
@@ -206,20 +198,17 @@ api_key
                 new_dates.push(string_d);
             }
             dates_available = new_dates;
-            //console.log(dates_available);
 
             var map_names_available = []
             {% for n in map_names %}
                 map_names_available.push('{{n}}');
             {% endfor %}
-            //console.log(map_names_available);
 
             var temp_buckets = []
             {% for b in buck %}
                 temp_buckets.push({{b}});
             {% endfor %}
             var buckets = temp_buckets.reverse(); //reverse because default var = spread
-            //console.log(buckets);
 
             var zoomit;
             {% if loc=='DC' %}
@@ -229,7 +218,6 @@ api_key
             {% else %}
                 zoomit = 11;
             {% endif %}
-            //console.log(zoomit);
 
             var mean_lon;
             var mean_lat;
@@ -247,6 +235,7 @@ api_key
             var current_date_index;
             var swBound=new google.maps.LatLng({{min_lat}},{{min_lon}});
             var neBound=new google.maps.LatLng({{max_lat}},{{max_lon}});
+            var bounds=new google.maps.LatLngBounds(swBound,neBound);
             var currentOverlayImg;
             var date_selected=false;
             var display_markers=false;
@@ -320,21 +309,21 @@ api_key
                 }
                 span.appendChild(document.createTextNode(image_date));
                 //map
-                var image_name=image_date.split(' ')[0]+'_'+image_date.split(' ')[1];
-                var bounds=new google.maps.LatLngBounds(swBound,neBound);
+                var image_name=image_date.split(' ')[0]+'_'+monthS_to_monthN_dict[image_date.split(' ')[1]];
                 var srcImage="/get_map?name="+image_name+"&loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
                 if(overlay!=null){
                     overlay.setMap(null);
                 }
                 overlay=new TQOverlay(bounds,srcImage,map);
+                //markers
                 if(display_markers==true){
                     resetMarkers();
                     getMarkers();
                 }
                 //console.log("</ updateMapImage");
             }
-            function updateBucketsDates(){
-                //console.log("< updateBucketsDates");
+            function (){
+                //console.log("< updateBuckets");
                 //buckets
                 reqB = "/update_buckets?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
                 $.get(reqB, function(dataB) {
@@ -345,41 +334,18 @@ api_key
                     } else {
                         buckets = temp_buckets;
                     }
-                    //dates
-                    reqD = "/get_dates?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
-                    $.get(reqD, function(dataD) {
-                        dates_available = [];
-                        dataD_dict=$.parseJSON(dataD) //doesn't keep order - booooo
-                        for(var key in dataD_dict){
-                            dates_available.push( parseInt( dataD_dict[key].split(' ')[0] + monthS_to_monthN_dict[dataD_dict[key].split(' ')[1]] ) );
-                            //dates_available.push(dataD_dict[key]);
-                        }
-                        dates_available.sort();
-                        var new_dates = [];
-                        for( var i = 0; i < dates_available.length; i++ ){
-                            var string_d = dates_available[i].toString();
-                            var year_string = string_d.substring(0,4);
-                            var month_string = string_d.substring(4);
-                            string_d = year_string+" "+monthN_to_monthS_dict[month_string];
-                            new_dates.push(string_d);
-                        }
-                        dates_available = new_dates;
-                        //for(var d in dates_available)
-                        current_date_index = dates_available.length-1;
-                        //slider
-                        document.getElementById('slide').value = document.getElementById('slide').max;
-                        //update map/legend
-                        updateMapImage();
-                        setLegend();
-                    })
+                    //update map/legend
+                    updateMapImage();
+                    setLegend();
                 })
+                //console.log("</ updateBuckets");
             }
             function updateSlider(slideAmount) {
                 //console.log("< updateSlider");
                 //set current_date_index
                 document.getElementById('slide').value = Number(slideAmount);
                 selectDate(Number(slideAmount));
-                //console.log("</ call updateSlider");
+                //console.log("</ updateSlider");
             }
             function earlier(){
                 //console.log("< earlier");
@@ -433,13 +399,13 @@ api_key
             function selectVar(new_var){
                 //console.log("< selectVar");
                 map_var=document.querySelector('input[name=mpvar]:checked').value;
-                updateBucketsDates();
+                updateBuckets();
                 //console.log("</ selectVar");
             }
             function selectPrice(new_price){
                 //console.log("< selectPrice");
                 map_price=document.querySelector('input[name=mppri]:checked').value;
-                updateBucketsDates();
+                updateBuckets();
                 //console.log("</ selectPrice");
             }
 
@@ -465,7 +431,7 @@ api_key
                 //console.log("< getMarkers");
                 display_markers=true;
                 image_date=dates_available[current_date_index]
-                image_name=image_date.split(' ')[0]+'_'+image_date.split(' ')[1];
+                image_name=image_date.split(' ')[0]+'_'+monthS_to_monthN_dict[image_date.split(' ')[1]];
                 req = "/get_markers?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price+"&name="+image_name;
                 $.get(req, function(data) {
                     markers_dict=$.parseJSON(data);
@@ -477,24 +443,31 @@ api_key
                                             if(map_var == 'spread'){
                                                 money = '$';
                                             };
-                                            var txt = '1st price: $'+showMonies(markers_dict[key]['priceA'])+'<br>'+map_var_dict[map_var]+': '+money+showMonies(markers_dict[key]['var']);
+                                            var txt = '1st price: $'+showMonies(markers_dict[key]['priceA'])+
+                                                        '<br>'+map_var_dict[map_var]+': '+money+showMonies(markers_dict[key]['var']+
+                                                        '<br>1st sale - baths: '+markers_dict[key]['bedsA']+', beds: '+markers_dict[key]['bathsA']+
+                                                        '<br>2nd sale - baths: '+markers_dict[key]['bedsB']+', beds: '+markers_dict[key]['bathsB']+);
                                             createMarker(latlng, title, txt);
                                         }
                                     });
                 //console.log("</ getMarkers");
             }
             function clearMarkers() {
+                //console.log("< clearMarkers");
                 display_markers=false;
                 for (var i = 0; i < markers_list.length; i++) {
                     markers_list[i].setMap(null);
                 };
                 markers_list = [];
+                //console.log("</ clearMarkers");
             }
             function resetMarkers() {
+                //console.log("< resetMarkers");
                 for (var i = 0; i < markers_list.length; i++) {
                     markers_list[i].setMap(null);
                 };
                 markers_list = [];
+                //console.log("</ resetMarkers");
             }
 
 
@@ -510,34 +483,30 @@ api_key
                 return showMonies(num);
             }
             function showMonies(money){
-                // from http://stackoverflow.com/a/2901298
+                //console.log("< showMonies");
+                // from http://stackoverflow.com/a/2901298 to add a comma(s) in the right spot(s)
                 var parts = money.toString().split(".");
                 return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
 
 /* HELPERS */
             function setNavigationEnabledness(){
+                //console.log("< setNavigationEnabledness");
                 document.getElementById("earlier").disabled=current_date_index<=0;
                 document.getElementById("later").disabled=current_date_index>=dates_available.length-1;
-            }
-            function fetch(url,callback){
-                var xhr=new XMLHttpRequest();
-                xhr.onreadystatechange=function(){
-                    if(xhr.readyState==4&&xhr.status==200){
-                        callback(xhr.responseText);
-                    }
-                };
-                xhr.open("GET",url,true);
-                xhr.send();
+                //console.log("</ setNavigationEnabledness");
             }
             function TQOverlay(bounds,image,map){
+                //console.log("< TQOverlay");
                 this.bounds_=bounds;
                 this.image_=image;
                 this.map_=map;
                 this.div_=null;
                 this.setMap(map);
+                //console.log("</ TQOverlay");
             }
             TQOverlay.prototype.onAdd=function(){
+                //console.log("< TQOverlay.prototype.onAdd");
                 var div=document.createElement('DIV');
                 div.style.border="none";
                 div.style.borderWidth="0px";
@@ -546,14 +515,17 @@ api_key
                 currentOverlayImg.src=this.image_;
                 currentOverlayImg.style.width="100%";
                 currentOverlayImg.style.height="100%";
+                currentOverlayImg.style.position="absolute";
                 currentOverlayImg.style.opacity=.5;
                 currentOverlayImg.style.filter='alpha(opacity=50)';
                 div.appendChild(currentOverlayImg);
                 this.div_=div;
                 var panes=this.getPanes();
                 panes.overlayLayer.appendChild(div);
+                //console.log("</ TQOverlay.prototype.onAdd");
             }
             TQOverlay.prototype.draw=function(){
+                //console.log("< TQOverlay.prototype.draw");
                 var overlayProjection=this.getProjection();
                 var sw=overlayProjection.fromLatLngToDivPixel(this.bounds_.getSouthWest());
                 var ne=overlayProjection.fromLatLngToDivPixel(this.bounds_.getNorthEast());
@@ -562,10 +534,13 @@ api_key
                 div.style.top=ne.y+'px';
                 div.style.width=(ne.x-sw.x)+'px';
                 div.style.height=(sw.y-ne.y)+'px';
+                //console.log("</ TQOverlay.prototype.draw");
             }
             TQOverlay.prototype.onRemove=function(){
+                //console.log("< TQOverlay.prototype.onRemove");
                 this.div_.parentNode.removeChild(this.div_);
                 this.div_=null;
+                //console.log("</ TQOverlay.prototype.onRemove");
             }
         </script>
     </head>
@@ -662,6 +637,7 @@ api_key
     </body>
 </html>
 
+<!-- for reference -->
 <!-- colors from png writer (gausify.cpp) -->
 <!-- double colors[18][3] =
     rgba(0, 0, 225, 0.5) //blue

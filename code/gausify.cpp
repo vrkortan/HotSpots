@@ -1,4 +1,5 @@
-//had to install freetype with brew...  ???
+//did not worry about free type (png writer has an optional dependancy on it)after messing with AWS
+//  however you can install it with brew on a mac (worked for me)
 //Compile:
 //INHOUSE (on a MAC)
 //g++ -Wall -O3 -Wno-deprecated `freetype-config --cflags` `freetype-config --libs` -DNO_FREETYPE -I/usr/local/include/ -I/opt/local/include -I/opt/local/include/freetype2 -o ./gausify gausify.cpp -L/usr/local/lib/ -L/opt/local/lib/ -lz -lpngwriter -lpng
@@ -28,6 +29,7 @@
 //#include <cstdlib> strtol(s.c_str(),0,10);
 
 //from http://stackoverflow.com/a/236803
+//to split a string by a delimter
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
     std::string item;
@@ -43,7 +45,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 //
 
-
+//change from grid coordinates to latitude/longitude
 void grid_to_ll(double ll[2], int x, int y, double min_lon, double max_lon, double min_lat, double max_lat, double grid_x, double grid_y)
 {
     //x is lon, y is lat
@@ -59,6 +61,7 @@ void grid_to_ll(double ll[2], int x, int y, double min_lon, double max_lon, doub
     ll[1] = lat;
 }
 
+//change from latitude/longitude to grid coordinates
 void ll_to_pixel(double xy[2], int lon, int lat, double min_lon, double max_lon, double min_lat, double max_lat, double grid_x, double grid_y)\
 {
     //x is lon, y is lat
@@ -78,6 +81,7 @@ void ll_to_pixel(double xy[2], int lon, int lat, double min_lon, double max_lon,
 
 int main (int argc, char* argv[])
 {
+    //17 colors for png that correspond to colors in app, blue to red
     double colors_highred[18][3] =
         {{0./225., 0./225., 225./225.}, //blue
         {0./225., 86./225., 225./225.},
@@ -98,6 +102,7 @@ int main (int argc, char* argv[])
         {225./225., 91./225., 0./225.},
         {225./225., 0./225., 0./225.}}; //red
 
+    //17 colors for png that correspond to colors in app, red to blue
     double colors_highblue[18][3] =
         {{225./225., 0./225., 0./225.}, //red
         {225./225., 91./225., 0./225.},
@@ -185,6 +190,7 @@ int main (int argc, char* argv[])
         }
 	}
 
+    //usage
 	if (argc<(1+Narg))
 	{
 		std::cout << "Usage: gausify -l=min_lon,max_lon,min_lat,max_lat -g=grid_x,grid_y -s=sigma -b=blocks -c=distance_cutoff filename -i=1" << std::endl;
@@ -194,7 +200,7 @@ int main (int argc, char* argv[])
 
     filename = argv[Narg];
 
-    //check to make sure output file exists
+    //check to make sure output file does not already exist
     std::stringstream ss;
     std::string output_filename;
     std::vector<std::string> filename_vector;
@@ -218,7 +224,7 @@ int main (int argc, char* argv[])
         exit(0);
     }
 
-    //read file into vector (value, lon, lat)
+    //read flip stats by month csv file into vector (value, lon, lat)
     std::vector<std::vector<double> > values;
     std::ifstream f_in(filename.c_str());
     if (!f_in) {
@@ -242,16 +248,17 @@ int main (int argc, char* argv[])
                 }
                 record.push_back( std::stod(s) );
             }
-            //remove last value (sold_price_A), not necessary for the plot
-            record.pop_back();
+            //remove last values (sold_price_A, beds_A, beds_B, baths_A, baths_B), not necessary for the plot
+            for(int j = 0; j < 5; j++){
+                record.pop_back();
+            }
 
             values.push_back( record );
         }
     }
 
-    //prepair to write files
+    //prepair to write png file
     double bucket_size = std::abs(max_target - min_target) / 18.;
-    //double norm = 1. / ( sigma * sqrt(2. * M_PI) );
     double sum = 0.0;
 
     FILE *f_out;
@@ -292,9 +299,19 @@ int main (int argc, char* argv[])
                 //set if use red as the high value or blue as the high value
                 double colors[18][3];
                 if(highred == 0){
-                    std::copy(std::begin(colors_highblue), std::end(colors_highblue), std::begin(colors));
+                    //std::copy(std::begin(colors_highblue), std::end(colors_highblue), std::begin(colors));
+                    for(int i=0; i<18; i++){
+                        for(int k=0; k<3; k++){
+                            colors[i][k] = colors_highblue[i][k];
+                        }
+                    }
                 } else {
-                    std::copy(std::begin(colors_highred), std::end(colors_highred), std::begin(colors));
+                    //std::copy(std::begin(colors_highred), std::end(colors_highred), std::begin(colors));
+                    for(int i=0; i<18; i++){
+                        for(int k=0; k<3; k++){
+                            colors[i][k] = colors_highred[i][k];
+                        }
+                    }
                 }
 
                 //turn sum into color
@@ -319,10 +336,7 @@ int main (int argc, char* argv[])
                     b = colors[idx][2];
                 }
 
-                // if(sum > 2.){
-                //     printf("\ngrid :%.2f,%.2f  sum :%.3f  idx :%i\n",pt_lon,pt_lat,sum,idx);
-                // }
-
+                //plot point
                 png.plot(xi, yi, r, g, b);
             }
         }

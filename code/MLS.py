@@ -197,7 +197,7 @@ class MLS:
 
         #write to csv
         print ("writting flipped metrics to csv...")
-        with open(filename_out, 'w') as csvfile:
+        with open(self.csv_flip_filename, 'w') as csvfile:
             writer = csv.writer(self.csv_flip_filename, lineterminator='\n', delimiter=',')
             writer.writerows(flipped)
 

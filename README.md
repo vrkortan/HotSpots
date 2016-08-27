@@ -8,12 +8,12 @@
 This is one way to visually render flip metrics on a map.  Flips are made up of two different events, a 1st sale and a 2nd sale (with construction/modifications between).  The possible metrics used here are gross profit, hold time, construction days, 1st sale DOM (days on market), 2nd sale DOM (days on market).  The data can also be subset by the sale price of the 1st sale.  Both of these attributes can be selected on the lower left side of the map.  The time period is selected by the slider at the top.  The metrics are aggregated for the past 6 months from the date given.
 
 ## Data:
-The data comes from a few MLSs in partnership an agreement with Privy
+The data comes from a few MLSs in partnership and agreement with Privy
 
 <img src="./code/HS_app/static/img/logos/privylogo.jpg" width="100"/>
 
 ## Code:
-The code breaks down into four parts:
+The code breaks down into three main parts:
 - creating csv files from the MLS SQL datbases
     - code/init_data.py
 - creating the img files for the app

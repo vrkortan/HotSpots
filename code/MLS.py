@@ -39,6 +39,9 @@ class MLS:
         all_date_columns = ['created_at', 'updated_at', 'listed_on', 'contracted_on', 'sold_on']
         #load csv
         df = pd.read_csv(self.csv_full_filename, parse_dates=all_date_columns, infer_datetime_format=True)
+        #date parsing doesn't seem to work with dc 'sold_on'
+        if self.location == 'DC':
+            df['sold_on'] = pd.to_datetime(df['sold_on'], format='%Y-%m-%d', errors='coerce')
         #drop rows with no date in 'sold_on', no lon, no lat
         df = df.dropna(subset=['sold_on', 'lng', 'lat'])
         #drop rows with dates > today
@@ -159,7 +162,6 @@ class MLS:
                 row.append( df_temp.iloc[ A, flip_metrics_dict['sold_price'] ] )
                 row.append( df_temp.iloc[ A, flip_metrics_dict['beds'] ] )
                 row.append( df_temp.iloc[ A, flip_metrics_dict['baths'] ] )
-                row.append( df_temp.iloc[ A, flip_metrics_dict['sold_price'] ] )
                 row.append( df_temp.iloc[ B, flip_metrics_dict['listed_on'] ] )
                 row.append( df_temp.iloc[ B, flip_metrics_dict['contracted_on'] ] )
                 row.append( df_temp.iloc[ B, flip_metrics_dict['sold_on'] ] )
@@ -198,7 +200,7 @@ class MLS:
         #write to csv
         print ("writting flipped metrics to csv...")
         with open(self.csv_flip_filename, 'w') as csvfile:
-            writer = csv.writer(self.csv_flip_filename, lineterminator='\n', delimiter=',')
+            writer = csv.writer(csvfile, lineterminator='\n', delimiter=',')
             writer.writerows(flipped)
 
     '''
@@ -501,7 +503,7 @@ class MLS:
         #call function to calculate target variable, and set self.date_column
         df = self.target_dict[self.target_name](df)
         #keep these columns, last ones are for the tags on the markers in the map, if want to change also need to change in write_month_to_csv and in gausify.cpp
-        df = df[[self.target_name, 'lng', 'lat', self.date_column, 'sold_price_A', 'beds_A', 'beds_B', 'baths_A', 'baths_B']]
+        df = df[[self.target_name, 'lng', 'lat', self.date_column, 'sold_price_A', 'beds_A', 'beds_B', 'baths_A', 'baths_B', 'change_finished_square_feet']]
 
         #min max target valuese:
         #do this here because I want it consistant for all price ranges for a given location
@@ -570,7 +572,8 @@ class MLS:
                     print ('file %s already exists' % (filename))
                 else:
                     os.system('touch %s' % (filename)) #to write empty file, not sure if pandas will write an empty df to csv
-                    df2[[self.target_name, 'lng', 'lat', 'sold_price_A', 'beds_A', 'beds_B', 'baths_A', 'baths_B']].to_csv(filename, header=False, index=False, mode='w')
+                    #if want to change cols here (for marker purposes...) must also change in gaussify and load_flip()
+                    df2[[self.target_name, 'lng', 'lat', 'sold_price_A', 'beds_A', 'beds_B', 'baths_A', 'baths_B', 'change_finished_square_feet']].to_csv(filename, header=False, index=False, mode='w')
             else:
                 print ('not enough data to write file')
 
@@ -681,7 +684,6 @@ class MLS:
         set the size of the grid if grid_square=False
             - this was an attemp to get good proportions in the PNG
         '''
-        #set calculation specific directory
         if not self.grid_square:
             if self.location == 'DC':
                 self.grid_y = int( self.grid_x * ( abs(self.max_lat-self.min_lat) / abs(self.max_lon-self.min_lon) ) )
@@ -730,13 +732,15 @@ if __name__ == '__main__':
     map_prices = ['0_200000', '200000_400000', '400000_600000', '600000_800000', '800000_1000000', '1000000_plus', 'all']
     map_values = ['spread', 'hold_time', 'project_days', 'initial_days_to_contract', 'final_days_to_contract']
     months = [4,6,8]
-    sigmabs = [1,2,3,5]
+    sigmabs = [1,2,3]
+    grid_max = 2500
+    grid_sqare_tf=False
 
     #test run
-    map_prices = ['400000_600000', '600000_800000']
-    map_values = ['spread']
-    months = [4]
-    sigmabs = [2]
+    # map_prices = ['400000_600000', '600000_800000']
+    # map_values = ['spread']
+    # months = [4]
+    # sigmabs = [2]
 
     #AWS
     base = '/home/ubuntu/moredata/toAWS/data'
@@ -751,6 +755,8 @@ if __name__ == '__main__':
     csv_flip_dc = '/Users/victoriakortan/Desktop/HotSpots/privy_data/dc_flip_data.csv'
     csv_flip_den = '/Users/victoriakortan/Desktop/HotSpots/privy_data/den_flip_data.csv'
 
+
+    #make png files
     for month in months:
         for sigmab in sigmabs:
             date_dir = 'month_ave_%i' % (month)
@@ -761,7 +767,7 @@ if __name__ == '__main__':
                     mls = MLS(csv_full_filename=csv_full_den,
                                 csv_flip_filename=csv_flip_den, base_dir=base,
                                 location='DEN', target_name=val, target_price=price,
-                                grid_x=1800, grid_y=1800, grid_square=True, distance_cutoff=10,
+                                grid_x=grid_max, grid_y=grid_max, grid_square=grid_sqare_tf, distance_cutoff=10,
                                 sigma_blocks=sigmab, month_dir=date_dir, parallelize=True)
                     df = mls.load_flip()
                     mls.write_month_to_csv(df)
@@ -771,7 +777,7 @@ if __name__ == '__main__':
                     mls = MLS(csv_full_filename=csv_full_dc,
                                 csv_flip_filename=csv_flip_dc, base_dir=base,
                                 location='DC', target_name=val, target_price=price,
-                                grid_x=2000, grid_y=2000, grid_square=True, distance_cutoff=10,
+                                grid_x=grid_max, grid_y=grid_max, grid_square=grid_sqare_tf, distance_cutoff=10,
                                 sigma_blocks=sigmab, month_dir=date_dir, parallelize=True)
                     df = mls.load_flip()
                     mls.write_month_to_csv(df)

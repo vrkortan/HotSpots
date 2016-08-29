@@ -248,8 +248,8 @@ int main (int argc, char* argv[])
                 }
                 record.push_back( std::stod(s) );
             }
-            //remove last values (sold_price_A, beds_A, beds_B, baths_A, baths_B), not necessary for the plot
-            for(int j = 0; j < 5; j++){
+            //remove last values (sold_price_A, beds_A, beds_B, baths_A, baths_B, change_finished_square_feet), not necessary for the plot
+            for(int j = 0; j < 6; j++){
                 record.pop_back();
             }
 

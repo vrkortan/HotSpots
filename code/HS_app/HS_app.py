@@ -138,7 +138,7 @@ def get_markers():
             if line != '':
                 marker = line.split(',')
                 marker = [char.strip() for char in marker]
-                markers_dict[cnt] = {"var": marker[0], "lon": marker[1], "lat": marker[2], "priceA": marker[3], "bedsA": marker[4], "bedsB": marker[5], "bathsA": marker[6], "bathsB":marker[7]}
+                markers_dict[cnt] = {"var": marker[0], "lon": marker[1], "lat": marker[2], "priceA": marker[3], "bedsA": marker[4], "bedsB": marker[5], "bathsA": marker[6], "bathsB": marker[7], "change_finished_sqft": marker[8]}
             cnt += 1
     return json.dumps(markers_dict)
 
@@ -152,12 +152,14 @@ if __name__ == '__main__':
     #pre-set variables
     month_ave = 4
     s = 2
-    grid_den = '1598X2000'
-    grid_dc = '2000X1297'
+    grid_dc = '1000X648'
+    grid_den = '799X1000'
     #current values that can be mapped
     map_values = ['spread', 'hold_time', 'project_days', 'initial_days_to_contract', 'final_days_to_contract']
+    map_values = ['spread']
     #current price points that can be mapped
     map_prices = ['all', '0_200000', '200000_400000', '400000_600000', '600000_800000', '800000_1000000', '1000000_plus']
+    map_prices = ['400000_600000', '600000_800000']
     #have two base dirs
     dict_base_filename = {}
     #local

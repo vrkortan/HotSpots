@@ -322,7 +322,7 @@ api_key
                 }
                 //console.log("</ updateMapImage");
             }
-            function (){
+            function updateBuckets(){
                 //console.log("< updateBuckets");
                 //buckets
                 reqB = "/update_buckets?loc="+loc+"&map_var="+map_var+"&map_pri="+map_price;
@@ -444,9 +444,10 @@ api_key
                                                 money = '$';
                                             };
                                             var txt = '1st price: $'+showMonies(markers_dict[key]['priceA'])+
-                                                        '<br>'+map_var_dict[map_var]+': '+money+showMonies(markers_dict[key]['var']+
+                                                        '<br>'+map_var_dict[map_var]+': '+money+showMonies(markers_dict[key]['var'])+
                                                         '<br>1st sale - baths: '+markers_dict[key]['bedsA']+', beds: '+markers_dict[key]['bathsA']+
-                                                        '<br>2nd sale - baths: '+markers_dict[key]['bedsB']+', beds: '+markers_dict[key]['bathsB']+);
+                                                        '<br>2nd sale - baths: '+markers_dict[key]['bedsB']+', beds: '+markers_dict[key]['bathsB']+
+                                                        '<br>change sq ft: '+showMonies(markers_dict[key]['change_finished_sqft']);
                                             createMarker(latlng, title, txt);
                                         }
                                     });

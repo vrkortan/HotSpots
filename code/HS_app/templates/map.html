@@ -229,12 +229,25 @@ api_key
                 mean_lat = 39.742043;
             {% endif %}
 
+            var min_lon = {{min_lon}}
+            var max_lon = {{max_lon}}
+            var min_lat = {{min_lat}}
+            var max_lat = {{max_lat}}
+            // correct slight vertical misalignment with DC, DEN data
+            {% if loc=='DC' %}
+                min_lat -= 0.0025;
+                max_lat -= 0.0025;
+            {% elif loc=='DEN' %}
+                min_lat -= 0.001;
+                max_lat -= 0.001;
+            {% endif %}
+
 
             var overlay=null;
             var map;
             var current_date_index;
-            var swBound=new google.maps.LatLng({{min_lat}},{{min_lon}});
-            var neBound=new google.maps.LatLng({{max_lat}},{{max_lon}});
+            var swBound=new google.maps.LatLng(min_lat,min_lon);
+            var neBound=new google.maps.LatLng(max_lat,max_lon);
             var bounds=new google.maps.LatLngBounds(swBound,neBound);
             var currentOverlayImg;
             var date_selected=false;
@@ -445,8 +458,8 @@ api_key
                                             };
                                             var txt = '1st price: $'+showMonies(markers_dict[key]['priceA'])+
                                                         '<br>'+map_var_dict[map_var]+': '+money+showMonies(markers_dict[key]['var'])+
-                                                        '<br>1st sale - baths: '+markers_dict[key]['bedsA']+', beds: '+markers_dict[key]['bathsA']+
-                                                        '<br>2nd sale - baths: '+markers_dict[key]['bedsB']+', beds: '+markers_dict[key]['bathsB']+
+                                                        '<br>1st sale - beds: '+markers_dict[key]['bedsA']+', baths: '+markers_dict[key]['bathsA']+
+                                                        '<br>2nd sale - beds: '+markers_dict[key]['bedsB']+', baths: '+markers_dict[key]['bathsB']+
                                                         '<br>change sq ft: '+showMonies(markers_dict[key]['change_finished_sqft']);
                                             createMarker(latlng, title, txt);
                                         }

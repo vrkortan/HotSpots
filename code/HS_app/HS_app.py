@@ -152,14 +152,12 @@ if __name__ == '__main__':
     #pre-set variables
     month_ave = 4
     s = 2
-    grid_dc = '1000X648'
-    grid_den = '799X1000'
+    grid_dc = '2500X1622'
+    grid_den = '1997X2500'
     #current values that can be mapped
     map_values = ['spread', 'hold_time', 'project_days', 'initial_days_to_contract', 'final_days_to_contract']
-    map_values = ['spread']
     #current price points that can be mapped
     map_prices = ['all', '0_200000', '200000_400000', '400000_600000', '600000_800000', '800000_1000000', '1000000_plus']
-    map_prices = ['400000_600000', '600000_800000']
     #have two base dirs
     dict_base_filename = {}
     #local
